@@ -1,6 +1,46 @@
 "use client";
 
-import { MotionConfig, motion, type HTMLMotionProps } from "motion/react";
+import {
+  MotionConfig,
+  motion,
+  useMotionTemplate,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+  useTransform,
+  type HTMLMotionProps,
+} from "motion/react";
+
+/**
+ * Pointer-driven tilt plus a soft spotlight that follows the cursor.
+ * Spread `handlers` on the element, apply `style`, and render `spotlight` as a background layer.
+ */
+export function useTilt(maxTilt = 5) {
+  const reduce = useReducedMotion();
+  const px = useMotionValue(0.5);
+  const py = useMotionValue(0.5);
+  const spring = { stiffness: 170, damping: 20, mass: 0.6 };
+  const rotateY = useSpring(useTransform(px, [0, 1], [-maxTilt, maxTilt]), spring);
+  const rotateX = useSpring(useTransform(py, [0, 1], [maxTilt, -maxTilt]), spring);
+  const sx = useTransform(px, (v) => `${v * 100}%`);
+  const sy = useTransform(py, (v) => `${v * 100}%`);
+  const spotlight = useMotionTemplate`radial-gradient(420px circle at ${sx} ${sy}, rgba(255,250,236,0.55), transparent 55%)`;
+
+  const handlers = {
+    onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
+      if (reduce || e.pointerType !== "mouse") return;
+      const r = e.currentTarget.getBoundingClientRect();
+      px.set((e.clientX - r.left) / r.width);
+      py.set((e.clientY - r.top) / r.height);
+    },
+    onPointerLeave: () => {
+      px.set(0.5);
+      py.set(0.5);
+    },
+  };
+
+  return { handlers, style: { rotateX, rotateY, transformPerspective: 900 }, spotlight };
+}
 
 /** Strong ease-out: fast start, long settle. Used for every entrance on the page. */
 export const EASE_OUT = [0.22, 1, 0.36, 1] as const;

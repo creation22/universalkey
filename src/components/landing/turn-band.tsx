@@ -1,10 +1,18 @@
 "use client";
 
-import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
-import { useRef } from "react";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValueEvent,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+} from "motion/react";
+import { useRef, useState } from "react";
 import { GoldenKey } from "./golden-key";
 import { EASE_OUT } from "./motion-primitives";
-import { Clouds, Colonnade, LightRays, MarbleRock } from "./scenery";
+import { Clouds, Colonnade, DustMotes, LightRays, MarbleRock } from "./scenery";
 
 function ArchPortal() {
   return (
@@ -53,6 +61,12 @@ export function TurnBand() {
   const glow = useTransform(scrollYProgress, [0.1, 0.55], [0.35, 1]);
   const glowScale = useTransform(scrollYProgress, [0.1, 0.55], [0.85, 1.1]);
 
+  // Once the turn completes, the portal "unlocks": rings of light pulse out from the key.
+  const [unlocked, setUnlocked] = useState(false);
+  useMotionValueEvent(scrollYProgress, "change", (p) => {
+    if (!unlocked && p >= 0.58) setUnlocked(true);
+  });
+
   return (
     <section
       ref={ref}
@@ -81,6 +95,22 @@ export function TurnBand() {
           <LightRays className="top-[45%]" size={900} strength={0.9} />
         </motion.div>
         <ArchPortal />
+        <DustMotes count={16} seed={23} className="left-[18%] right-[18%] top-[25%]" />
+        <div className="pointer-events-none absolute left-1/2 top-[44%] -translate-x-1/2 -translate-y-1/2">
+          <AnimatePresence>
+            {unlocked &&
+              [0, 1, 2].map((i) => (
+                <motion.span
+                  key={i}
+                  className="absolute left-1/2 top-1/2 block h-[160px] w-[160px] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#e9c37a]"
+                  style={{ boxShadow: "0 0 24px rgba(255,220,150,0.7), inset 0 0 18px rgba(255,236,190,0.6)" }}
+                  initial={{ scale: 0.3, opacity: 0.9 }}
+                  animate={{ scale: 2.4, opacity: 0 }}
+                  transition={{ duration: 1.8, ease: EASE_OUT, delay: i * 0.28 }}
+                />
+              ))}
+          </AnimatePresence>
+        </div>
         <div className="absolute inset-x-0 top-[16%] flex justify-center" style={{ perspective: 800 }}>
           <motion.div style={reduce ? undefined : { rotateY: turn }}>
             <GoldenKey length={360} className="h-[180px] w-auto md:h-[200px]" />

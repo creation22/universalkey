@@ -5,12 +5,14 @@ import { Hero } from "@/components/landing/hero";
 import { MotionProvider } from "@/components/landing/motion-primitives";
 import { Problem } from "@/components/landing/problem";
 import { Solution } from "@/components/landing/solution";
+import { StickyNav } from "@/components/landing/sticky-nav";
 import { TurnBand } from "@/components/landing/turn-band";
 
 export default function Home() {
   return (
     <MotionProvider>
-      <main className="flex-1 overflow-x-clip">
+      <StickyNav />
+      <main id="top" className="flex-1 overflow-x-clip">
         <Hero />
         <Problem />
         <TurnBand />

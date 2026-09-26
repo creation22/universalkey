@@ -11,7 +11,7 @@ import {
 } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { GoldenKey } from "./golden-key";
-import { Chevron, Doc, Gear, Lock, Pen, Plus, Target } from "./icons";
+import { Check, Chevron, Doc, Gear, Lock, Pen, Plus, Target } from "./icons";
 import { EASE_OUT, Reveal } from "./motion-primitives";
 import { LightRays } from "./scenery";
 
@@ -59,32 +59,62 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-const TAB_ROWS: Record<TabId, { icon: typeof Gear; label: string; value: string }[]> = {
+const TAB_ROWS: Record<TabId, { icon: typeof Gear; label: string; options: string[] }[]> = {
   prefs: [
-    { icon: Pen, label: "Writing style", value: "Concise" },
-    { icon: Gear, label: "Default tools", value: "Auto" },
-    { icon: Target, label: "Personal context", value: "Enabled" },
-    { icon: Doc, label: "Rules (.cursorrules)", value: "Synced" },
+    { icon: Pen, label: "Writing style", options: ["Concise", "Detailed", "Casual"] },
+    { icon: Gear, label: "Default tools", options: ["Auto", "Manual", "Ask first"] },
+    { icon: Target, label: "Personal context", options: ["Enabled", "Disabled"] },
+    { icon: Doc, label: "Rules (.cursorrules)", options: ["Synced", "Local only"] },
   ],
   instr: [
-    { icon: Pen, label: "Tone", value: "Direct" },
-    { icon: Doc, label: "Output format", value: "Markdown" },
-    { icon: Target, label: "Language", value: "English" },
-    { icon: Gear, label: "Code style", value: "TypeScript" },
+    { icon: Pen, label: "Tone", options: ["Direct", "Friendly", "Formal"] },
+    { icon: Doc, label: "Output format", options: ["Markdown", "Plain text", "JSON"] },
+    { icon: Target, label: "Language", options: ["English", "Español", "Deutsch"] },
+    { icon: Gear, label: "Code style", options: ["TypeScript", "Python", "Go"] },
   ],
   ctx: [
-    { icon: Doc, label: "Linked projects", value: "3 linked" },
-    { icon: Target, label: "Memory", value: "On" },
-    { icon: Doc, label: "Shared files", value: "12 files" },
-    { icon: Gear, label: "Sync", value: "Live" },
+    { icon: Doc, label: "Linked projects", options: ["3 linked", "5 linked", "None"] },
+    { icon: Target, label: "Memory", options: ["On", "Off"] },
+    { icon: Doc, label: "Shared files", options: ["12 files", "All files", "None"] },
+    { icon: Gear, label: "Sync", options: ["Live", "Hourly", "Manual"] },
   ],
   privacy: [
-    { icon: Lock, label: "Model training", value: "Opted out" },
-    { icon: Doc, label: "History", value: "30 days" },
-    { icon: Target, label: "App sharing", value: "Ask first" },
-    { icon: Lock, label: "Encryption", value: "On" },
+    { icon: Lock, label: "Model training", options: ["Opted out", "Opted in"] },
+    { icon: Doc, label: "History", options: ["30 days", "7 days", "Forever"] },
+    { icon: Target, label: "App sharing", options: ["Ask first", "Always", "Never"] },
+    { icon: Lock, label: "Encryption", options: ["On", "Off"] },
   ],
 };
+
+/** A setting value that cycles through its options on click, sliding the new value in. */
+function CycleValue({ options }: { options: string[] }) {
+  const [i, setI] = useState(0);
+  const value = options[i];
+  return (
+    <button
+      type="button"
+      onClick={() => setI((n) => (n + 1) % options.length)}
+      className="flex items-center gap-1.5 rounded px-1 text-ink-soft transition-colors hover:text-gold-800"
+      aria-label={`Change value, currently ${value}`}
+    >
+      <span className="relative inline-flex overflow-hidden">
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.span
+            key={value}
+            initial={{ y: 10, opacity: 0, filter: "blur(3px)" }}
+            animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+            exit={{ y: -10, opacity: 0, filter: "blur(3px)" }}
+            transition={{ type: "spring", duration: 0.35, bounce: 0 }}
+            className="whitespace-nowrap"
+          >
+            {value}
+          </motion.span>
+        </AnimatePresence>
+      </span>
+      <Chevron className="h-3 w-3 text-muted" />
+    </button>
+  );
+}
 
 function PreferencesPanel() {
   const [tab, setTab] = useState<TabId>("prefs");
@@ -133,16 +163,13 @@ function PreferencesPanel() {
               return (
                 <li
                   key={row.label}
-                  className="flex items-center justify-between px-3 py-2 text-[11.5px] transition-colors hover:bg-[#fcf8f1]"
+                  className="flex items-center justify-between py-1.5 pl-3 pr-2 text-[11.5px] transition-colors hover:bg-[#fcf8f1]"
                 >
                   <span className="flex items-center gap-2 text-ink-soft">
                     <Icon className="h-3.5 w-3.5 text-muted" />
                     {row.label}
                   </span>
-                  <span className="flex items-center gap-1.5 text-ink-soft">
-                    {row.value}
-                    <Chevron className="h-3 w-3 text-muted" />
-                  </span>
+                  <CycleValue options={row.options} />
                 </li>
               );
             })}
@@ -165,6 +192,18 @@ function useCountUp(to: number, inView: boolean, duration = 1.6) {
   return value;
 }
 
+// Last 14 days of spend, drawn as a sparkline under the balance.
+const SPEND = [22, 26, 24, 31, 28, 35, 30, 38, 34, 41, 37, 44, 40, 47];
+const SPARK_W = 150;
+const SPARK_H = 30;
+const sparkPoints = SPEND.map((v, i) => {
+  const x = (i / (SPEND.length - 1)) * SPARK_W;
+  const y = SPARK_H - ((v - 18) / 32) * SPARK_H;
+  return [Math.round(x * 10) / 10, Math.round(y * 10) / 10] as const;
+});
+const SPARK_LINE = sparkPoints.map(([x, y], i) => `${i ? "L" : "M"}${x} ${y}`).join(" ");
+const SPARK_AREA = `${SPARK_LINE} L${SPARK_W} ${SPARK_H} L0 ${SPARK_H} Z`;
+
 function BalanceCards() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.6 });
@@ -184,7 +223,7 @@ function BalanceCards() {
 
   return (
     <div ref={ref} className="grid grid-cols-[1.35fr_1fr] gap-3">
-      <div className="relative rounded-xl border border-[#efe4d2] bg-white/95 p-4 shadow-[0_18px_36px_-24px_rgba(92,62,25,0.45)]">
+      <div className="relative overflow-hidden rounded-xl border border-[#efe4d2] bg-white/95 p-4 pb-3 shadow-[0_18px_36px_-24px_rgba(92,62,25,0.45)]">
         <p className="font-serif text-[15px] text-ink-soft">Your balance</p>
         <div className="mt-1 flex items-end justify-between gap-2">
           <motion.p className="font-serif text-[2rem] leading-none tabular-nums text-ink">{balanceText}</motion.p>
@@ -197,6 +236,34 @@ function BalanceCards() {
             Add funds
           </motion.button>
         </div>
+        <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} preserveAspectRatio="none" className="mt-3 h-7 w-full overflow-visible" aria-hidden="true">
+          <defs>
+            <linearGradient id="spark-fill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stopColor="#d6a552" stopOpacity="0.35" />
+              <stop offset="1" stopColor="#d6a552" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <motion.path
+            d={SPARK_AREA}
+            fill="url(#spark-fill)"
+            initial={{ opacity: 0 }}
+            animate={inView ? { opacity: 1 } : undefined}
+            transition={{ duration: 0.8, delay: 1 }}
+          />
+          <motion.path
+            d={SPARK_LINE}
+            fill="none"
+            stroke="#b8863f"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+            initial={{ pathLength: 0 }}
+            animate={inView ? { pathLength: 1 } : undefined}
+            transition={{ duration: 1.4, ease: EASE_OUT, delay: 0.2 }}
+          />
+        </svg>
+        <p className="mt-1 text-[10px] text-muted">Spend across 4 apps · last 14 days</p>
         <AnimatePresence>
           {bumps.map((id) => (
             <motion.span
@@ -212,8 +279,31 @@ function BalanceCards() {
           ))}
         </AnimatePresence>
       </div>
-      <div className="flex flex-col justify-center rounded-xl border border-[#d6e6cf] bg-sage-100 p-4 text-center shadow-[0_18px_36px_-24px_rgba(60,107,63,0.45)]">
-        <p className="font-serif text-[1.65rem] leading-none text-sage-700">
+
+      <div className="flex flex-col items-center justify-center rounded-xl border border-[#d6e6cf] bg-sage-100 p-4 text-center shadow-[0_18px_36px_-24px_rgba(60,107,63,0.45)]">
+        {/* Savings ring */}
+        <div className="relative mb-2 h-12 w-12">
+          <svg viewBox="0 0 48 48" className="h-full w-full -rotate-90" aria-hidden="true">
+            <circle cx="24" cy="24" r="19" fill="none" stroke="#c9dcc1" strokeWidth="4" />
+            <circle cx="24" cy="24" r="13.5" fill="none" stroke="#d6e6cf" strokeWidth="1" strokeDasharray="1.5 2.5" />
+            <motion.circle
+              cx="24"
+              cy="24"
+              r="19"
+              fill="none"
+              stroke="#3c6b3f"
+              strokeWidth="4"
+              strokeLinecap="round"
+              initial={{ pathLength: 0 }}
+              animate={inView ? { pathLength: 0.42 } : undefined}
+              transition={{ duration: 1.8, ease: EASE_OUT }}
+            />
+          </svg>
+          <span className="absolute inset-0 flex items-center justify-center text-sage-700">
+            <Check className="h-4 w-4" strokeWidth={2.4} />
+          </span>
+        </div>
+        <p className="font-serif text-[1.55rem] leading-none text-sage-700">
           Saved <motion.span className="tabular-nums">{savedText}</motion.span>
         </p>
         <p className="mt-1.5 text-[10.5px] text-[#5c7a5d]">vs. individual pricing</p>
@@ -224,37 +314,62 @@ function BalanceCards() {
 
 /* ---------- Row 3: the same you, in any app ---------- */
 
-const APP_GLYPHS = [
+const BURST = Array.from({ length: 8 }, (_, i) => {
+  const a = (i * Math.PI) / 4;
+  const p = (n: number) => Math.round(n * 100) / 100;
+  return { x1: p(12 + Math.cos(a) * 2), y1: p(12 + Math.sin(a) * 2), x2: p(12 + Math.cos(a) * 8), y2: p(12 + Math.sin(a) * 8) };
+});
+
+const APPS = [
   // Generic glyphs standing in for AI apps.
-  <path key="play" d="M9 6.5v11l9-5.5z" fill="#111" />,
-  <g key="burst" stroke="#d9774b" strokeWidth="2.2" strokeLinecap="round">
-    {Array.from({ length: 8 }).map((_, i) => {
-      const a = (i * Math.PI) / 4;
-      return <line key={i} x1={12 + Math.cos(a) * 2} y1={12 + Math.sin(a) * 2} x2={12 + Math.cos(a) * 8} y2={12 + Math.sin(a) * 8} />;
-    })}
-  </g>,
-  <g key="knot" fill="none" stroke="#111" strokeWidth="1.5">
-    {[0, 60, 120].map((r) => (
-      <ellipse key={r} cx="12" cy="12" rx="7.5" ry="3.8" transform={`rotate(${r} 12 12)`} />
-    ))}
-  </g>,
-  <path
-    key="star"
-    d="M12 3.5l2 5.2 5.5-1.7-3.5 4.5 3.5 4.5-5.5-1.7-2 5.2-2-5.2-5.5 1.7 3.5-4.5-3.5-4.5 5.5 1.7z"
-    fill="none"
-    stroke="#1f8a8a"
-    strokeWidth="1.6"
-    strokeLinejoin="round"
-  />,
-  <g key="more" fill="#8a7d6c">
-    <circle cx="7" cy="12" r="1.4" />
-    <circle cx="12" cy="12" r="1.4" />
-    <circle cx="17" cy="12" r="1.4" />
-  </g>,
+  { name: "Code editor", glyph: <path d="M9 6.5v11l9-5.5z" fill="#111" /> },
+  {
+    name: "Chat assistant",
+    glyph: (
+      <g stroke="#d9774b" strokeWidth="2.2" strokeLinecap="round">
+        {BURST.map((l, i) => (
+          <line key={i} {...l} />
+        ))}
+      </g>
+    ),
+  },
+  {
+    name: "Model API",
+    glyph: (
+      <g fill="none" stroke="#111" strokeWidth="1.5">
+        {[0, 60, 120].map((r) => (
+          <ellipse key={r} cx="12" cy="12" rx="7.5" ry="3.8" transform={`rotate(${r} 12 12)`} />
+        ))}
+      </g>
+    ),
+  },
+  {
+    name: "Research agent",
+    glyph: (
+      <path
+        d="M12 3.5l2 5.2 5.5-1.7-3.5 4.5 3.5 4.5-5.5-1.7-2 5.2-2-5.2-5.5 1.7 3.5-4.5-3.5-4.5 5.5 1.7z"
+        fill="none"
+        stroke="#1f8a8a"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    ),
+  },
+  {
+    name: "More coming",
+    glyph: (
+      <g fill="#8a7d6c">
+        <circle cx="7" cy="12" r="1.4" />
+        <circle cx="12" cy="12" r="1.4" />
+        <circle cx="17" cy="12" r="1.4" />
+      </g>
+    ),
+  },
 ];
 
 function AppsCard() {
   const reduce = useReducedMotion();
+  const [hovered, setHovered] = useState<number | null>(null);
   return (
     <motion.div
       initial="hidden"
@@ -276,9 +391,12 @@ function AppsCard() {
         Coming
       </span>
       <div className="flex justify-center gap-2.5">
-        {APP_GLYPHS.map((glyph, i) => (
+        {APPS.map((app, i) => (
           <motion.div
-            key={i}
+            key={app.name}
+            className="relative"
+            onHoverStart={() => setHovered(i)}
+            onHoverEnd={() => setHovered((h) => (h === i ? null : h))}
             variants={{
               hidden: { opacity: 0, y: 10, scale: 0.9 },
               show: {
@@ -295,9 +413,38 @@ function AppsCard() {
               className="flex h-11 w-11 items-center justify-center rounded-[10px] border border-[#eee4d4] bg-white shadow-[0_4px_10px_-6px_rgba(92,62,25,0.35)]"
             >
               <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
-                {glyph}
+                {app.glyph}
               </svg>
             </motion.div>
+            {/* "Synced" badge pops in after the icon lands */}
+            {i < APPS.length - 1 && (
+              <motion.span
+                className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-sage-700 text-white"
+                variants={{
+                  hidden: { scale: 0, opacity: 0 },
+                  show: {
+                    scale: 1,
+                    opacity: 1,
+                    transition: { type: "spring", duration: 0.5, bounce: 0.5, delay: 0.7 + i * 0.12 },
+                  },
+                }}
+              >
+                <Check className="h-2.5 w-2.5" strokeWidth={3} />
+              </motion.span>
+            )}
+            <AnimatePresence>
+              {hovered === i && (
+                <motion.span
+                  initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                  className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-[10px] text-white shadow-lg"
+                >
+                  {app.name}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </motion.div>
         ))}
       </div>

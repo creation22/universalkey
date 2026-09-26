@@ -163,6 +163,64 @@ export function Clouds({ className = "" }: { className?: string }) {
   );
 }
 
+/** Deterministic PRNG so particle layouts match between server and client renders. */
+function mulberry32(seed: number) {
+  return () => {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function makeMotes(count: number, seed: number) {
+  const rand = mulberry32(seed);
+  return Array.from({ length: count }, () => ({
+    left: Math.round(rand() * 1000) / 10,
+    top: Math.round(rand() * 1000) / 10,
+    size: 1.5 + Math.round(rand() * 25) / 10,
+    rise: 30 + Math.round(rand() * 60),
+    drift: Math.round((rand() - 0.5) * 40),
+    duration: 7 + Math.round(rand() * 80) / 10,
+    delay: Math.round(rand() * 60) / 10,
+  }));
+}
+
+/** Specks of dust drifting up through the light. */
+export function DustMotes({
+  count = 28,
+  seed = 7,
+  className = "",
+}: {
+  count?: number;
+  seed?: number;
+  className?: string;
+}) {
+  const reduce = useReducedMotion();
+  if (reduce) return null;
+  const motes = makeMotes(count, seed);
+  return (
+    <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`} aria-hidden="true">
+      {motes.map((m, i) => (
+        <motion.span
+          key={i}
+          className="absolute rounded-full bg-[#fff6dc]"
+          style={{
+            left: `${m.left}%`,
+            top: `${m.top}%`,
+            width: m.size,
+            height: m.size,
+            boxShadow: "0 0 6px 1px rgba(255,236,190,0.9)",
+          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.9, 0], y: [0, -m.rise], x: [0, m.drift] }}
+          transition={{ duration: m.duration, delay: m.delay, repeat: Infinity, ease: "easeInOut" }}
+        />
+      ))}
+    </div>
+  );
+}
+
 /** Broken marble boulder with veins, for the corners of the scene. */
 export function MarbleRock({
   className = "",

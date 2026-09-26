@@ -8,6 +8,7 @@ import {
   useSpring,
   useTransform,
 } from "motion/react";
+import { useState } from "react";
 import { GoldenKey } from "./golden-key";
 import { ArrowRight } from "./icons";
 import { EASE_OUT, StaggerWords } from "./motion-primitives";
@@ -57,6 +58,7 @@ function Wallet() {
   const rotateX = useSpring(useTransform(py, [0, 1], [8, -8]), { stiffness: 150, damping: 18 });
   const glareX = useTransform(px, [0, 1], [20, 80]);
   const glare = useMotionTemplate`radial-gradient(circle at ${glareX}% 30%, rgba(255,230,180,0.28), transparent 55%)`;
+  const [open, setOpen] = useState(false);
 
   return (
     <div style={{ perspective: 1000 }} className="relative">
@@ -77,22 +79,55 @@ function Wallet() {
             px.set(0.5);
             py.set(0.5);
           }}
+          onHoverStart={() => setOpen(true)}
+          onHoverEnd={() => setOpen(false)}
           style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
           animate={reduce ? undefined : { y: [0, -6, 0] }}
           transition={{ duration: 6, ease: "easeInOut", repeat: Infinity }}
-          className="relative h-[170px] w-[250px] rounded-[18px] p-[7px] shadow-[0_40px_60px_-30px_rgba(60,30,8,0.75),0_12px_24px_-12px_rgba(60,30,8,0.5)] md:h-[190px] md:w-[280px]"
+          className="relative h-[170px] w-[250px] md:h-[190px] md:w-[280px]"
         >
-          <div
-            className="absolute inset-0 rounded-[18px]"
-            style={{
-              background:
-                "radial-gradient(120% 90% at 30% 20%, #b77a41 0%, #8e5424 45%, #5f3313 100%)",
-            }}
-          />
-          {/* Stitching */}
-          <div className="absolute inset-[9px] rounded-[13px] border-2 border-dashed border-[#e3b777]/70" />
-          <div className="absolute inset-[16px] rounded-[10px] shadow-[inset_0_2px_6px_rgba(40,18,4,0.45)]" />
-          <motion.div className="absolute inset-0 rounded-[18px]" style={{ background: glare }} />
+          {/* Card peeking out of the slot; rises on hover */}
+          <motion.div
+            className="absolute inset-x-[12%] -top-5 h-[70px] rounded-[10px] border border-[#f3e2bf] shadow-[0_6px_14px_-6px_rgba(60,30,8,0.5)]"
+            style={{ background: "linear-gradient(135deg, #fffaf0 0%, #f6e6c6 55%, #e9cf9c 100%)" }}
+            animate={{ y: open ? -26 : 0 }}
+            transition={{ type: "spring", duration: 0.55, bounce: 0.3 }}
+          >
+            <div className="absolute left-3 top-2.5 h-4 w-5 rounded-[3px] bg-[linear-gradient(135deg,#f6d58f,#b8863f)] shadow-[inset_0_0_0_1px_rgba(122,82,32,0.35)]" />
+            <span className="absolute right-3 top-2 font-serif text-[10px] tracking-[0.2em] text-gold-700">UK · 4211</span>
+          </motion.div>
+
+          <div className="absolute inset-0 rounded-[18px] shadow-[0_40px_60px_-30px_rgba(60,30,8,0.75),0_12px_24px_-12px_rgba(60,30,8,0.5)]">
+            <div
+              className="absolute inset-0 rounded-[18px]"
+              style={{
+                background:
+                  "radial-gradient(120% 90% at 30% 20%, #b77a41 0%, #8e5424 45%, #5f3313 100%)",
+              }}
+            />
+            {/* Leather grain */}
+            <div
+              className="absolute inset-0 rounded-[18px] opacity-35 mix-blend-multiply"
+              style={{
+                backgroundImage:
+                  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23g)'/></svg>\")",
+              }}
+            />
+            {/* Slot lip */}
+            <div className="absolute inset-x-[10%] top-0 h-3 rounded-b-[8px] bg-[#4a2610]/60 shadow-[inset_0_-1px_0_rgba(255,210,150,0.25)]" />
+            {/* Stitching and embossed double border */}
+            <div className="absolute inset-[9px] rounded-[13px] border-2 border-dashed border-[#e3b777]/70" />
+            <div className="absolute inset-[17px] rounded-[10px] border border-[#f0c98a]/35 shadow-[inset_0_2px_6px_rgba(40,18,4,0.45),0_1px_0_rgba(255,220,160,0.18)]" />
+            <div className="absolute inset-[21px] rounded-[8px] border border-[#2e1606]/35" />
+            {/* Corner ornaments */}
+            {["left-[22px] top-[22px]", "right-[22px] top-[22px] rotate-90", "right-[22px] bottom-[22px] rotate-180", "left-[22px] bottom-[22px] -rotate-90"].map((pos) => (
+              <svg key={pos} viewBox="0 0 16 16" className={`absolute h-4 w-4 ${pos}`} aria-hidden="true">
+                <path d="M1 12 C1 5 5 1 12 1 M1 8 C3 8 8 3 8 1" fill="none" stroke="#e3b777" strokeOpacity="0.8" strokeWidth="1.1" />
+                <circle cx="4" cy="4" r="1.2" fill="#e3b777" />
+              </svg>
+            ))}
+            <motion.div className="absolute inset-0 rounded-[18px]" style={{ background: glare }} />
+          </div>
 
           <div className="relative flex h-full flex-col items-center justify-center gap-2">
             <GoldenKey length={330} className="h-[62px] w-auto opacity-95 md:h-[70px]" />

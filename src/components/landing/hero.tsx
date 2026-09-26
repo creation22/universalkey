@@ -6,7 +6,7 @@ import { GoldenKey } from "./golden-key";
 import { HeroScene } from "./hero-scene";
 import { ArrowRight } from "./icons";
 import { EASE_OUT, StaggerWords } from "./motion-primitives";
-import { LightRays } from "./scenery";
+import { DustMotes, LightRays } from "./scenery";
 
 /** Four-point star that flares on the key's bow every few seconds. */
 function Glint({ className = "", delay = 0 }: { className?: string; delay?: number }) {
@@ -61,6 +61,7 @@ export function Hero() {
         transition={{ duration: 2, ease: EASE_OUT }}
       >
         <LightRays className="top-[13%]" size={1800} strength={1.35} />
+        <DustMotes count={34} seed={11} className="left-[20%] right-[20%]" />
         {/* Hot core right behind the bow */}
         <div
           className="absolute left-1/2 top-[13%] h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full"

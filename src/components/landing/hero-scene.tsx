@@ -71,10 +71,41 @@ const HIGH_CLOUDS: [number, number, number][] = [
   [720, 20, 130],
 ];
 
+const keystone = (xl: number, xr: number) => {
+  const mid = (xl + xr) / 2;
+  const rx = (xr - xl) / 2;
+  const apex = (springAt(xl) + springAt(xr)) / 2 - rx * 1.05;
+  const k = rx * 0.16;
+  const h = rx * 0.26;
+  return `M${r(mid - k * 0.55)} ${r(apex + h * 0.15)} L${r(mid + k * 0.55)} ${r(apex + h * 0.15)} L${r(mid + k * 0.8)} ${r(apex - h)} L${r(mid - k * 0.8)} ${r(apex - h)} Z`;
+};
+
 function Arcade({ id }: { id: string }) {
   return (
     <g mask={`url(#${id}-fade)`}>
+      {/* Columns mirrored in the polished floor */}
+      <g opacity="0.28">
+        {COLUMNS.map(([a, b], i) => (
+          <path
+            key={i}
+            d={quad(a, b, wallFloor, (x) => wallFloor(x) + (wallFloor(x) - wallTop(x)) * 0.2)}
+            fill={`url(#${id}-reflect)`}
+          />
+        ))}
+      </g>
+
       <path d={WALL} fillRule="evenodd" fill={`url(#${id}-wall)`} />
+
+      {/* Keystones crowning each arch */}
+      {OPENINGS.slice(0, 4).map(([xl, xr], i) => (
+        <path
+          key={i}
+          d={keystone(xl, xr)}
+          fill="#fbf4e6"
+          stroke="#d2b588"
+          strokeWidth={r(Math.max(0.5, depth(xl)))}
+        />
+      ))}
 
       {/* Arch soffits: the thickness of the wall inside each opening */}
       {OPENINGS.map(([xl, xr], i) => (
@@ -210,6 +241,15 @@ export function HeroScene({
           <stop offset="0.5" stopColor="#f2e3ca" />
           <stop offset="1" stopColor="#e8d5b5" />
         </linearGradient>
+        <linearGradient id={`${id}-reflect`} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#f3e3c6" stopOpacity="1" />
+          <stop offset="1" stopColor="#f3e3c6" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id={`${id}-beam`} x1="150" y1="170" x2="520" y2="640" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#fffdf4" stopOpacity="0.75" />
+          <stop offset="0.55" stopColor="#fff8e4" stopOpacity="0.3" />
+          <stop offset="1" stopColor="#fff8e4" stopOpacity="0" />
+        </linearGradient>
         <linearGradient id={`${id}-rock-top`} x1="0" x2="1" y1="0" y2="1">
           <stop offset="0" stopColor="#ffffff" />
           <stop offset="1" stopColor="#f1e9dc" />
@@ -235,6 +275,9 @@ export function HeroScene({
         </filter>
         <filter id={`${id}-soft`} x="-50%" y="-100%" width="200%" height="300%">
           <feGaussianBlur stdDeviation="10" />
+        </filter>
+        <filter id={`${id}-beam-blur`} x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="14" />
         </filter>
         <filter id={`${id}-glow`} x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="40" />
@@ -280,6 +323,21 @@ export function HeroScene({
         <Arcade id={id} />
         <g transform={`translate(${W} 0) scale(-1 1)`}>
           <Arcade id={id} />
+        </g>
+      </motion.g>
+
+      {/* Sun shafts slanting in through the near arches */}
+      <motion.g
+        filter={`url(#${id}-beam-blur)`}
+        style={{ mixBlendMode: "screen" }}
+        animate={reduce ? undefined : { opacity: [0.6, 1, 0.6] }}
+        transition={{ duration: 9, ease: "easeInOut", repeat: Infinity }}
+      >
+        <path d="M60 160 L222 182 L640 660 L360 660 Z" fill={`url(#${id}-beam)`} />
+        <path d="M272 250 L352 262 L560 660 L452 660 Z" fill={`url(#${id}-beam)`} opacity="0.7" />
+        <g transform={`translate(${W} 0) scale(-1 1)`}>
+          <path d="M60 160 L222 182 L640 660 L360 660 Z" fill={`url(#${id}-beam)`} />
+          <path d="M272 250 L352 262 L560 660 L452 660 Z" fill={`url(#${id}-beam)`} opacity="0.7" />
         </g>
       </motion.g>
 
